@@ -1,19 +1,32 @@
 body {
     font-family: cursive;
+    background: linear-gradient(135deg, #f06, #f79, #9f0, #06f);
     display: flex;
     justify-content: center;
     align-items: center;
     height: 100vh;
-    background-color: #f0f0f0;
     margin: 0;
+    color: #fff;
+}
+
+.container {
+    width: 400px;
+    background: rgba(0, 0, 0, 0.7);
+    border-radius: 10px;
+    padding: 20px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.5);
+}
+
+.status-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
 }
 
 .chat-container {
-    background: #ffffff;
-    border-radius: 10px;
-    padding: 20px;
-    box-shadow: 0 0 10px rgba(0,0,0,0.1);
-    width: 300px;
+    display: flex;
+    flex-direction: column;
 }
 
 #chat-box {
@@ -22,8 +35,8 @@ body {
     border-radius: 5px;
     padding: 10px;
     overflow-y: auto;
-    margin-bottom: 10px;
     background: #e6e6fa;
+    margin-bottom: 10px;
 }
 
 #message-input {
@@ -35,7 +48,7 @@ body {
     margin-bottom: 10px;
 }
 
-#send-button {
+#send-button, #join-room, #video-call, #audio-call, #delete-history {
     width: 100%;
     padding: 10px;
     background: #4caf50;
@@ -43,4 +56,10 @@ body {
     border: none;
     border-radius: 5px;
     cursor: pointer;
+    margin-bottom: 5px;
+}
+
+footer {
+    text-align: center;
+    margin-top: 20px;
 }

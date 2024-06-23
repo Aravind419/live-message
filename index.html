@@ -3,17 +3,30 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Live Chat</title>
+    <title>Chat Application</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <div class="chat-container">
-        <input type="text" id="room-name" placeholder="Enter room name" />
-        <button id="join-room">Join Room</button>
-        <div id="chat-box"></div>
-        <textarea id="message-input" placeholder="Type your message here..."></textarea>
-        <button id="send-button">Send</button>
+    <div class="container">
+        <div class="status-bar">
+            <span id="status">Not Connected</span>
+            <button id="screenshot-button">Capture Screenshot</button>
+        </div>
+        <div class="chat-container">
+            <input type="text" id="room-name" placeholder="Enter room ID" />
+            <button id="join-room">Join Room</button>
+            <input type="file" id="file-upload" />
+            <div id="chat-box"></div>
+            <textarea id="message-input" placeholder="Type your message here..."></textarea>
+            <button id="send-button">Send</button>
+            <button id="video-call">Start Video Call</button>
+            <button id="audio-call">Start Audio Call</button>
+            <button id="delete-history">Auto Delete History</button>
+        </div>
     </div>
+    <footer>
+        <p>© Aravind</p>
+    </footer>
     <script src="/socket.io/socket.io.js"></script>
     <script src="script.js"></script>
 </body>
