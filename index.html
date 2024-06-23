@@ -3,19 +3,219 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Chat App</title>
-    <link rel="stylesheet" href="style.css">
+    <title>Chat Platform</title>
+    <style>
+        body {
+            font-family: 'Cursive', Arial, sans-serif;
+            background: linear-gradient(45deg, blue, green, purple, pink);
+            color: white;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+        }
+        .header {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px 20px;
+            background: rgba(0, 0, 0, 0.7);
+        }
+        .status {
+            color: lightgreen;
+        }
+        .content {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+        }
+        .footer {
+            background: rgba(0, 0, 0, 0.7);
+            padding: 10px;
+            text-align: center;
+        }
+        .input-field {
+            margin-bottom: 10px;
+        }
+        .warning {
+            color: red;
+        }
+        .search-results {
+            background: rgba(255, 255, 255, 0.9);
+            color: black;
+            padding: 10px;
+            margin-top: 10px;
+            border-radius: 5px;
+        }
+    </style>
 </head>
 <body>
-    <div id="chat-container">
-        <div id="status">Not connected</div>
-        <div id="messages"></div>
-        <input type="text" id="message-input" placeholder="Type a message...">
-        <button id="send-button">Send</button>
-        <input type="file" id="file-input">
-        <button id="upload-button">Upload</button>
+    <div class="header">
+        <div>Chat Platform</div>
+        <div class="status" id="status">Not Connected</div>
+    </div>
+    <div class="content">
+        <div class="input-field">
+            <input type="text" id="secret-key" placeholder="Enter Secret Key">
+            <button onclick="connectWithSecretKey()">Connect</button>
+        </div>
+        <div class="input-field">
+            <input type="text" id="room-id" placeholder="Enter Room ID">
+            <button onclick="generateRoomId()">Generate Room ID</button>
+        </div>
+        <div class="input-field">
+            <input type="text" id="username" placeholder="Enter Username">
+            <button onclick="joinRoom()">Join Room</button>
+        </div>
+        <div class="input-field">
+            <textarea id="message" placeholder="Type your message..."></textarea>
+            <button onclick="sendMessage()">Send</button>
+        </div>
+        <div id="warning" class="warning"></div>
+        <div id="chat"></div>
+        <div>
+            <input type="file" id="file-upload" style="display:none" multiple>
+            <button onclick="document.getElementById('file-upload').click()">Upload Files/Photos</button>
+        </div>
+        <button onclick="startVideoCall()">Start Video Call</button>
+        <button onclick="startAudioCall()">Start Audio Call</button>
+        <div class="input-field">
+            <input type="text" id="search-query" placeholder="Search...">
+            <button onclick="searchContent()">Search</button>
+        </div>
+        <div id="search-results" class="search-results"></div>
+    </div>
+    <div class="footer">
+        &copy; 2024 K.Aravind
     </div>
     <script src="/socket.io/socket.io.js"></script>
-    <script src="script.js"></script>
+    <script>
+        const socket = io();
+        let currentRoomId = '';
+        let currentUsername = '';
+
+        const secretKey = "Aravind006";
+
+        function connectWithSecretKey() {
+            const enteredKey = document.getElementById('secret-key').value;
+            if (enteredKey === secretKey) {
+                currentRoomId = 'secretRoom';
+                currentUsername = 'SecretUser';
+                joinRoom();
+            } else {
+                alert('Incorrect Secret Key');
+            }
+        }
+
+        function generateRoomId() {
+            fetch('/generateRoomId')
+                .then(response => response.json())
+                .then(data => {
+                    document.getElementById('room-id').value = data.roomId;
+                });
+        }
+
+        function joinRoom() {
+            const roomId = document.getElementById('room-id').value;
+            const username = document.getElementById('username').value;
+            if (!roomId || !username) {
+                alert('Room ID and Username are required.');
+                return;
+            }
+
+            currentRoomId = roomId;
+            currentUsername = username;
+
+            socket.emit('joinRoom', { roomId, username });
+            document.getElementById('status').innerText = `Connected to ${roomId}`;
+
+            document.getElementById('room-id').value = '';
+            document.getElementById('username').value = '';
+
+            socket.on('status', (status) => {
+                alert(status);
+            });
+
+            socket.on('message', (message) => {
+                displayMessage(message);
+            });
+
+            socket.on('screenshot', (message) => {
+                alert(message);
+            });
+
+            socket.on('videoCall', (message) => {
+                alert(message);
+            });
+
+            socket.on('audioCall', (message) => {
+                alert(message);
+            });
+        }
+
+        function sendMessage() {
+            const message = document.getElementById('message').value;
+            if (message.trim() === "") {
+                document.getElementById('warning').innerText = "Warning: Text is empty!";
+            } else {
+                socket.emit('sendMessage', { roomId: currentRoomId, message });
+                document.getElementById('message').value = "";
+                document.getElementById('warning').innerText = "";
+            }
+        }
+
+        function displayMessage(message) {
+            const chat = document.getElementById('chat');
+            const messageElement = document.createElement('div');
+            messageElement.innerText = message;
+            chat.appendChild(messageElement);
+        }
+
+        function startVideoCall() {
+            socket.emit('videoCall', currentRoomId);
+        }
+
+        function startAudioCall() {
+            socket.emit('audioCall', currentRoomId);
+        }
+
+        function searchContent() {
+            const query = document.getElementById('search-query').value;
+            if (query.trim() !== "") {
+                fetch(`https://www.googleapis.com/customsearch/v1?key=YOUR_API_KEY&cx=YOUR_CX&q=${query}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        let results = '<h3>Search Results:</h3>';
+                        data.items.forEach(item => {
+                            results += `<p><a href="${item.link}">${item.title}</a><br>${item.snippet}</p>`;
+                        });
+                        document.getElementById('search-results').innerHTML = results;
+                    });
+            }
+        }
+
+        document.getElementById('file-upload').addEventListener('change', function() {
+            const files = document.getElementById('file-upload').files;
+            const formData = new FormData();
+            for (const file of files) {
+                formData.append('files', file);
+            }
+            fetch('/upload', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                alert("Files/Photos uploaded successfully!");
+                console.log(data.files);
+            });
+        });
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'PrintScreen') {
+                socket.emit('screenshot', currentRoomId);
+            }
+        });
+    </script>
 </body>
 </html>
