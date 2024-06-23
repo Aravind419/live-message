@@ -1,107 +1,123 @@
 const socket = io();
+let currentRoomId = '';
+let currentUsername = '';
 
-const roomInput = document.getElementById('room-name');
-const joinRoomButton = document.getElementById('join-room');
-const messageInput = document.getElementById('message-input');
-const chatBox = document.getElementById('chat-box');
-const sendButton = document.getElementById('send-button');
-const status = document.getElementById('status');
-const fileUpload = document.getElementById('file-upload');
-const videoCallButton = document.getElementById('video-call');
-const audioCallButton = document.getElementById('audio-call');
-const screenshotButton = document.getElementById('screenshot-button');
-const deleteHistoryButton = document.getElementById('delete-history');
+const secretKey = "Aravind006";
 
-let currentRoom = '';
-
-joinRoomButton.addEventListener('click', () => {
-    currentRoom = roomInput.value || 'Aravind006';
-    if (currentRoom) {
-        socket.emit('join-room', currentRoom);
-        status.textContent = 'Connected';
-    }
-});
-
-messageInput.addEventListener('input', () => {
-    if (currentRoom) {
-        socket.emit('typing', { room: currentRoom, message: 'User is typing...' });
-    }
-});
-
-sendButton.addEventListener('click', () => {
-    const message = messageInput.value;
-    if (message && currentRoom) {
-        socket.emit('message', { room: currentRoom, message: message });
-        messageInput.value = '';
-        socket.emit('typing', { room: currentRoom, message: '' });
+function connectWithSecretKey() {
+    const enteredKey = document.getElementById('secret-key').value;
+    if (enteredKey === secretKey) {
+        currentRoomId = 'secretRoom';
+        currentUsername = 'SecretUser';
+        joinRoom();
     } else {
-        alert('Text is empty!');
+        alert('Incorrect Secret Key');
     }
-});
+}
 
-socket.on('message', (data) => {
-    if (data.room === currentRoom) {
-        const messageElement = document.createElement('div');
-        messageElement.textContent = data.message;
-        chatBox.appendChild(messageElement);
-        chatBox.scrollTop = chatBox.scrollHeight;
-        if (data.file) {
-            const fileElement = document.createElement('a');
-            fileElement.href = data.file;
-            fileElement.textContent = 'File';
-            chatBox.appendChild(fileElement);
-        }
+function generateRoomId() {
+    fetch('/generateRoomId')
+        .then(response => response.json())
+        .then(data => {
+            document.getElementById('room-id').value = data.roomId;
+        });
+}
+
+function joinRoom() {
+    const roomId = document.getElementById('room-id').value;
+    const username = document.getElementById('username').value;
+    if (!roomId || !username) {
+        alert('Room ID and Username are required.');
+        return;
     }
-});
 
-socket.on('typing', (data) => {
-    if (data.room === currentRoom) {
-        const typingIndicator = document.getElementById('typing-indicator');
-        if (data.message) {
-            if (!typingIndicator) {
-                const typingElement = document.createElement('div');
-                typingElement.id = 'typing-indicator';
-                typingElement.textContent = data.message;
-                chatBox.appendChild(typingElement);
-            }
-        } else {
-            if (typingIndicator) {
-                typingIndicator.remove();
-            }
-        }
+    currentRoomId = roomId;
+    currentUsername = username;
+
+    socket.emit('joinRoom', { roomId, username });
+    document.getElementById('status').innerText = `Connected to ${roomId}`;
+
+    document.getElementById('room-id').value = '';
+    document.getElementById('username').value = '';
+
+    socket.on('status', (status) => {
+        displayMessage(status);
+    });
+
+    socket.on('message', (message) => {
+        displayMessage(message);
+    });
+
+    socket.on('screenshot', (message) => {
+        alert(message);
+    });
+
+    socket.on('videoCall', (message) => {
+        alert(message);
+    });
+
+    socket.on('audioCall', (message) => {
+        alert(message);
+    });
+}
+
+function sendMessage() {
+    const message = document.getElementById('message').value;
+    if (message.trim() === "") {
+        document.getElementById('warning').innerText = "Warning: Text is empty!";
+    } else {
+        socket.emit('sendMessage', { roomId: currentRoomId, message });
+        document.getElementById('message').value = "";
+        document.getElementById('warning').innerText = "";
     }
-});
+}
 
-fileUpload.addEventListener('change', () => {
-    const file = fileUpload.files[0];
+function displayMessage(message) {
+    const chat = document.getElementById('chat');
+    chat.value += message + '\n';
+}
+
+function startVideoCall() {
+    socket.emit('videoCall', currentRoomId);
+}
+
+function startAudioCall() {
+    socket.emit('audioCall', currentRoomId);
+}
+
+function searchContent() {
+    const query = document.getElementById('search-query').value;
+    if (query.trim() !== "") {
+        fetch(`https://www.googleapis.com/customsearch/v1?key=YOUR_API_KEY&cx=YOUR_CX&q=${query}`)
+            .then(response => response.json())
+            .then(data => {
+                let results = '<h3>Search Results:</h3>';
+                data.items.forEach(item => {
+                    results += `<p><a href="${item.link}">${item.title}</a><br>${item.snippet}</p>`;
+                });
+                document.getElementById('search-results').innerHTML = results;
+            });
+    }
+}
+
+document.getElementById('file-upload').addEventListener('change', function() {
+    const files = document.getElementById('file-upload').files;
     const formData = new FormData();
-    formData.append('file', file);
+    for (const file of files) {
+        formData.append('files', file);
+    }
     fetch('/upload', {
         method: 'POST',
-        body: formData,
+        body: formData
     })
     .then(response => response.json())
     .then(data => {
-        if (data.filePath) {
-            socket.emit('message', { room: currentRoom, message: 'File uploaded', file: data.filePath });
-        }
+        alert("Files/Photos uploaded successfully!");
     });
 });
 
-videoCallButton.addEventListener('click', () => {
-    // Implement video call functionality
-});
-
-audioCallButton.addEventListener('click', () => {
-    // Implement audio call functionality
-});
-
-screenshotButton.addEventListener('click', () => {
-    // Implement screenshot functionality
-    alert('Your friend captured a screenshot!');
-});
-
-deleteHistoryButton.addEventListener('click', () => {
-    chatBox.innerHTML = '';
-    // Implement auto delete history functionality
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'PrintScreen') {
+        socket.emit('screenshot', currentRoomId);
+    }
 });
