@@ -3,60 +3,53 @@ const http = require('http');
 const socketIo = require('socket.io');
 const multer = require('multer');
 const path = require('path');
+const { v4: uuidv4 } = require('uuid');
 
 const app = express();
 const server = http.createServer(app);
 const io = socketIo(server);
 
-// Serve static files from the 'public' directory
-app.use(express.static('public'));
+const upload = multer({ dest: 'uploads/' });
 
-// Set up multer for file uploads
-const storage = multer.diskStorage({
-    destination: './uploads/',
-    filename: (req, file, cb) => {
-        cb(null, file.fieldname + '-' + Date.now() + path.extname(file.originalname));
-    }
-});
-const upload = multer({ storage: storage });
+app.use(express.static(path.join(__dirname, 'public')));
 
-// Handle file upload requests
-app.post('/upload', upload.single('file'), (req, res) => {
-    res.json({ filePath: `/uploads/${req.file.filename}` });
-});
-
-// Socket.io connection handling
 io.on('connection', (socket) => {
-    console.log('A user connected');
+    console.log('a user connected');
 
-    // Handle joining a room
-    socket.on('join-room', (room) => {
-        socket.join(room);
-        console.log(`User joined room: ${room}`);
-        // Notify all users in the room about the new user
-        io.to(room).emit('message', { room, message: 'A user has joined the room' });
+    socket.on('joinRoom', ({ roomId, username }) => {
+        socket.join(roomId);
+        io.to(roomId).emit('status', `${username} has joined the room`);
+        socket.on('disconnect', () => {
+            io.to(roomId).emit('status', `${username} has left the room`);
+        });
     });
 
-    // Handle message sending
-    socket.on('message', (data) => {
-        io.to(data.room).emit('message', data);
+    socket.on('sendMessage', ({ roomId, message }) => {
+        io.to(roomId).emit('message', message);
     });
 
-    // Handle typing indication
-    socket.on('typing', (data) => {
-        socket.to(data.room).emit('typing', data);
+    socket.on('screenshot', (roomId) => {
+        io.to(roomId).emit('screenshot', 'A screenshot has been taken');
     });
 
-    // Handle disconnection
-    socket.on('disconnect', () => {
-        console.log('A user disconnected');
-        // Notify all users about the disconnection
-        io.emit('message', { message: 'A user has disconnected' });
+    socket.on('videoCall', (roomId) => {
+        io.to(roomId).emit('videoCall', 'Starting video call...');
+    });
+
+    socket.on('audioCall', (roomId) => {
+        io.to(roomId).emit('audioCall', 'Starting audio call...');
     });
 });
 
-// Start the server
-const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => {
-    console.log(`Server is running on port ${PORT}`);
+app.post('/upload', upload.array('files'), (req, res) => {
+    res.json({ files: req.files });
+});
+
+app.get('/generateRoomId', (req, res) => {
+    const roomId = uuidv4();
+    res.json({ roomId });
+});
+
+server.listen(3000, () => {
+    console.log('listening on *:3000');
 });
